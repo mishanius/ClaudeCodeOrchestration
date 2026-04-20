@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How I Built a Multi-Agent AI System That Runs My Dev Team</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #fff;
+    color: #242424;
+    font-family: 'Lora', Georgia, serif;
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  article {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 60px 20px 80px;
+  }
+
+  h1 {
+    font-weight: 700;
+    font-size: 2.5em;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    font-size: 1.2em;
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 40px;
+  }
+
+  h2 {
+    font-weight: 700;
+    font-size: 1.5em;
+    margin: 44px 0 14px;
+    letter-spacing: -0.3px;
+  }
+
+  p {
+    margin-bottom: 18px;
+    font-size: 1.08em;
+  }
+
+  blockquote {
+    border-left: 3px solid #242424;
+    padding: 2px 0 2px 20px;
+    margin: 28px 0;
+    font-style: italic;
+    font-size: 1.2em;
+    line-height: 1.6;
+  }
+
+  code {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85em;
+    background: #f2f2f2;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  ul {
+    margin: 16px 0 18px 24px;
+    font-size: 1.08em;
+  }
+  ul li { margin-bottom: 6px; }
+
+  .sep {
+    text-align: center;
+    margin: 36px 0;
+    color: #ccc;
+    letter-spacing: 8px;
+  }
+
+  /* ---- Diagrams ---- */
+  .diagram {
+    background: #0a1628;
+    border-radius: 6px;
+    padding: 32px 20px;
+    margin: 28px 0;
+    color: #8ec8f8;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.72em;
+    line-height: 1.9;
+    overflow-x: auto;
+    position: relative;
+  }
+  .diagram::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    background:
+      linear-gradient(rgba(15,40,71,0.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15,40,71,0.35) 1px, transparent 1px);
+    background-size: 22px 22px;
+    pointer-events: none;
+  }
+  .d-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+    flex-wrap: wrap;
+  }
+  .d-box {
+    border: 1px solid #1e5fa8;
+    padding: 7px 14px;
+    text-align: center;
+    white-space: nowrap;
+    background: rgba(10,22,40,0.9);
+  }
+  .d-box.core {
+    border: 2px solid #3b8eed;
+    color: #fff;
+    box-shadow: 0 0 18px rgba(59,142,237,0.15);
+    padding: 10px 22px;
+  }
+  .d-box.accent { border-color: #f0a030; color: #f0a030; }
+  .d-box.green { border-color: #2ecc71; color: #2ecc71; }
+  .d-box.dim { border-style: dashed; border-color: #2a5080; color: #5a8ab5; }
+  .d-arrow { color: #3b8eed; text-align: center; padding: 2px 0; position: relative; z-index: 1; }
+  .d-label { color: #2a5080; font-size: 0.9em; text-align: center; position: relative; z-index: 1; }
+  .d-group {
+    border: 1px dashed #2a5080;
+    padding: 12px 14px 8px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    position: relative;
+  }
+  .d-group-label {
+    position: absolute;
+    top: -8px;
+    left: 12px;
+    background: #0a1628;
+    padding: 0 6px;
+    color: #2a5080;
+    font-size: 0.9em;
+  }
+
+  /* Horizontal flow diagram */
+  .h-diagram {
+    background: #0a1628;
+    border-radius: 6px;
+    padding: 28px 20px;
+    margin: 28px 0;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.72em;
+    overflow-x: auto;
+    position: relative;
+  }
+  .h-diagram::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    background:
+      linear-gradient(rgba(15,40,71,0.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15,40,71,0.35) 1px, transparent 1px);
+    background-size: 22px 22px;
+    pointer-events: none;
+  }
+  .h-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    position: relative;
+    z-index: 1;
+    flex-wrap: wrap;
+  }
+  .h-box {
+    border: 1px solid #1e5fa8;
+    padding: 8px 14px;
+    color: #8ec8f8;
+    background: rgba(10,22,40,0.9);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .h-box.accent { border-color: #f0a030; color: #f0a030; }
+  .h-arr { color: #3b8eed; padding: 0 6px; position: relative; z-index: 1; }
+</style>
+</head>
+<body>
+
+<article>
+
+  <h1>How I Built a Multi-Agent AI System That Runs My Dev Team</h1>
+  <p class="subtitle">A Python orchestrator, Claude SDK, and an event-driven architecture that lets AI agents write code, manage projects, and talk to each other — autonomously.</p>
+
+  <h2>The Big Picture</h2>
+
+  <p>You send a Telegram message. A team of AI agents spins up — a Tech Lead breaks down the work, engineers write code in parallel, QA tests everything. You get progress updates. No babysitting.</p>
+
+  <p>At the center sits an <strong>event-driven orchestrator</strong> that manages the entire lifecycle:</p>
+
+  <div class="diagram">
+    <div class="d-row"><div class="d-box accent">👤 Human</div></div>
+    <div class="d-label">Telegram · WhatsApp · Slack</div>
+    <div class="d-arrow">↓</div>
+    <div class="d-row">
+      <div class="d-box dim">Telegram</div>
+      <div class="d-box dim">WhatsApp</div>
+      <div class="d-box dim">Slack</div>
+    </div>
+    <div class="d-label">providers → JSON events</div>
+    <div class="d-arrow">↓</div>
+    <div class="d-row">
+      <div class="d-box dim">📥 Pending</div>
+      <div class="d-box dim">⚙ Processing</div>
+      <div class="d-box dim">✓ Done</div>
+    </div>
+    <div class="d-label">event queue</div>
+    <div class="d-arrow">↓</div>
+    <div class="d-row"><div class="d-box core">⚡ ORCHESTRATOR</div></div>
+    <div class="d-label">scheduler · session pool · recovery</div>
+    <div class="d-arrow">↕</div>
+    <div class="d-label">Claude SDK</div>
+    <div class="d-arrow">↓</div>
+    <div class="d-row">
+      <div class="d-box accent">Chief of Staff</div>
+      <div class="d-group">
+        <div class="d-group-label">Project Team ×N</div>
+        <div class="d-box accent">TL</div>
+        <div class="d-box">Eng 1</div>
+        <div class="d-box">Eng 2</div>
+        <div class="d-box">QA</div>
+      </div>
+      <div class="d-box">Global Agents</div>
+    </div>
+    <div class="d-arrow">↓</div>
+    <div class="d-label">tool calls (MCP)</div>
+    <div class="d-arrow">↓</div>
+    <div class="d-row">
+      <div class="d-box dim">Files</div>
+      <div class="d-box dim">Shell</div>
+      <div class="d-box dim">Browser</div>
+      <div class="d-box dim">Search</div>
+      <div class="d-box dim">Git</div>
+      <div class="d-box dim">Project Mgmt</div>
+    </div>
+  </div>
+
+  <h2>The Flow</h2>
+
+  <div class="h-diagram">
+    <div class="h-flow">
+      <div class="h-box accent">Message in</div>
+      <div class="h-arr">→</div>
+      <div class="h-box">Provider captures</div>
+      <div class="h-arr">→</div>
+      <div class="h-box">Event queued</div>
+      <div class="h-arr">→</div>
+      <div class="h-box" style="border-color:#3b8eed;color:#fff;">Orchestrator dispatches</div>
+      <div class="h-arr">→</div>
+      <div class="h-box">Session loaded</div>
+      <div class="h-arr">→</div>
+      <div class="h-box">Agent thinks + acts</div>
+      <div class="h-arr">→</div>
+      <div class="h-box accent">Response out</div>
+    </div>
+  </div>
+
+  <p>Every message becomes a JSON event. The orchestrator picks it up, loads a warm Claude session, and the agent executes — reading files, running commands, writing code, or delegating to other agents.</p>
+
+  <h2>Agents</h2>
+
+  <p>Each agent is a <strong>Claude instance</strong> with persistent context, role-specific instructions, and isolated tools. They don't manage their own lifecycle — the orchestrator handles startup, sessions, failures, and communication.</p>
+
+  <div class="diagram">
+    <div class="d-label">Agent Anatomy</div>
+    <div class="d-arrow">↓</div>
+    <div class="d-row">
+      <div class="d-box">Role Steering</div>
+      <div class="d-box">Custom Directives</div>
+      <div class="d-box green">Claude SDK Session</div>
+    </div>
+    <div class="d-arrow">↓</div>
+    <div class="d-row">
+      <div class="d-box dim">Isolated MCP Tools</div>
+      <div class="d-box dim">Persistent Context</div>
+      <div class="d-box dim">Inter-Agent Messaging</div>
+    </div>
+  </div>
+
+  <p>The <strong>Chief of Staff</strong> is always on — it triages requests, handles simple tasks, and delegates complex work to project teams.</p>
+
+  <h2>Project Teams</h2>
+
+  <p>Complex work gets a full team:</p>
+
+  <div class="diagram">
+    <div class="d-row"><div class="d-box accent">Human: "Build a battleships game"</div></div>
+    <div class="d-arrow">↓</div>
+    <div class="d-row"><div class="d-box accent">Chief of Staff</div></div>
+    <div class="d-label">creates project, briefs TL</div>
+    <div class="d-arrow">↓</div>
+    <div class="d-row"><div class="d-box accent">Tech Lead</div></div>
+    <div class="d-label">designs architecture, creates tickets, assigns work</div>
+    <div class="d-arrow">↓</div>
+    <div class="d-row">
+      <div class="d-box">Engineer 1</div>
+      <div class="d-box">Engineer 2</div>
+    </div>
+    <div class="d-label">code in parallel · push to Git</div>
+    <div class="d-arrow">↓</div>
+    <div class="d-row"><div class="d-box green">QA</div></div>
+    <div class="d-label">review · test · file bugs</div>
+    <div class="d-arrow">↓</div>
+    <div class="d-row"><div class="d-box accent">Progress → Human</div></div>
+  </div>
+
+  <p>Agents communicate through the same event system. The TL sends a message to an engineer — the orchestrator delivers it on the next cycle. All tasks live on Kanban boards, moving through TODO → In Progress → Done.</p>
+
+  <h2>Tools (MCP)</h2>
+
+  <p>Agents interact with the world through <strong>MCP servers</strong> — each one exposes a set of capabilities. Adding a new tool means writing a new server. The agent doesn't change.</p>
+
+  <div class="h-diagram">
+    <div class="h-flow">
+      <div class="h-box" style="border-color:#3b8eed;color:#fff;">Agent</div>
+      <div class="h-arr">→</div>
+      <div class="h-box">MCP Protocol</div>
+      <div class="h-arr">→</div>
+      <div class="h-box dim">Files</div>
+      <div class="h-box dim">Shell</div>
+      <div class="h-box dim">Browser</div>
+      <div class="h-box dim">Git</div>
+      <div class="h-box dim">Search</div>
+      <div class="h-box dim">Messaging</div>
+    </div>
+  </div>
+
+  <div class="sep">· · ·</div>
+
+  <h2>In Practice</h2>
+
+  <p>I send: <em>"Build a multiplayer battleships game with lobby system."</em></p>
+
+  <p>The Chief of Staff creates a project. The Tech Lead designs the architecture and creates 15 tickets across 6 milestones. Two engineers start coding in parallel. QA reviews the first PR. I get updates on Telegram throughout.</p>
+
+  <blockquote>It's not perfect. Sessions corrupt. Agents misunderstand requirements. But it works — and it gets better every day.</blockquote>
+
+</article>
+
+</body>
+</html>
